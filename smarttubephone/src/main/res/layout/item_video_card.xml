@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/video_card_width"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/card_image"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/video_card_image_height"
+        android:background="@color/phone_surface_elevated"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/card_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:paddingTop="6dp"
+        android:textColor="@color/phone_on_surface"
+        android:textSize="@dimen/video_card_title_size" />
+
+    <TextView
+        android:id="@+id/card_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/phone_on_surface_muted"
+        android:textSize="@dimen/video_card_subtitle_size" />
+</LinearLayout>

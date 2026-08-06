@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tablet landscape: more columns, slightly shorter shorts cards -->
+    <integer name="grid_span_video">4</integer>
+    <integer name="grid_span_shorts">5</integer>
+    <dimen name="shorts_card_height">240dp</dimen>
+    <dimen name="shorts_feed_max_width">400dp</dimen>
+    <dimen name="content_max_width">1100dp</dimen>
+</resources>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.liskovsoft.smartyoutubetv2.phone">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:resizeable="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+
+    <application
+        android:name=".PhoneApplication"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:resizeableActivity="true"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SmartTubePhone"
+        android:usesCleartextTraffic="true"
+        tools:replace="android:allowBackup,android:theme,android:label">
+
+        <activity
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.SmartTubePhone">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="youtube.com" />
+                <data android:host="www.youtube.com" />
+                <data android:host="m.youtube.com" />
+                <data android:host="youtu.be" />
+                <data android:pathPattern=".*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.browse.BrowseActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:launchMode="singleTask" />
+
+        <activity
+            android:name=".ui.playback.PlaybackActivity"
+            android:configChanges="keyboard|keyboardHidden"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.SmartTubePhone.Player" />
+
+        <activity
+            android:name=".shorts.ShortsFeedActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.SmartTubePhone.Player" />
+
+        <activity
+            android:name=".ui.search.SearchActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.signin.SignInActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.channel.ChannelActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.channeluploads.ChannelUploadsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.dialogs.AppDialogActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SmartTubePhone.Dialog" />
+    </application>
+</manifest>

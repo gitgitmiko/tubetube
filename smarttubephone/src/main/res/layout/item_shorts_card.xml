@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/shorts_card_padding">
+
+    <ImageView
+        android:id="@+id/shorts_card_image"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/shorts_card_height"
+        android:background="@color/phone_surface_elevated"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/shorts_bottom_gradient" />
+
+    <TextView
+        android:id="@+id/shorts_card_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:padding="10dp"
+        android:textColor="@color/phone_on_surface"
+        android:textSize="@dimen/shorts_card_title_size"
+        android:textStyle="bold" />
+</FrameLayout>

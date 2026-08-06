@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SmartTubePhone" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/phone_accent</item>
+        <item name="colorPrimaryVariant">@color/phone_accent</item>
+        <item name="colorSecondary">@color/phone_accent</item>
+        <item name="android:statusBarColor">@color/phone_bg</item>
+        <item name="android:navigationBarColor">@color/phone_bg</item>
+        <item name="android:windowBackground">@color/phone_bg</item>
+        <item name="colorSurface">@color/phone_surface</item>
+        <item name="colorOnSurface">@color/phone_on_surface</item>
+        <item name="android:textColorPrimary">@color/phone_on_surface</item>
+        <item name="android:textColorSecondary">@color/phone_on_surface_muted</item>
+        <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
+    </style>
+
+    <style name="Theme.SmartTubePhone.Player" parent="Theme.SmartTubePhone">
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowBackground">@color/player_background</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.SmartTubePhone.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/phone_accent</item>
+        <item name="android:windowBackground">@color/phone_surface</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowMinWidthMajor">100%</item>
+        <item name="android:windowMinWidthMinor">100%</item>
+    </style>
+</resources>

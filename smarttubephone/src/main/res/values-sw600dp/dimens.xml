@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="content_max_width">900dp</dimen>
+    <dimen name="shorts_feed_max_width">420dp</dimen>
+    <dimen name="nav_drawer_width">320dp</dimen>
+    <dimen name="content_padding">12dp</dimen>
+    <dimen name="content_padding_large">24dp</dimen>
+
+    <dimen name="video_card_width">200dp</dimen>
+    <dimen name="video_card_image_height">112dp</dimen>
+    <dimen name="video_card_title_size">14sp</dimen>
+    <dimen name="video_card_subtitle_size">12sp</dimen>
+
+    <dimen name="shorts_card_height">260dp</dimen>
+    <dimen name="shorts_card_title_size">13sp</dimen>
+    <dimen name="shorts_card_padding">8dp</dimen>
+
+    <dimen name="row_title_size">18sp</dimen>
+    <dimen name="search_field_max_width">640dp</dimen>
+
+    <integer name="grid_span_video">3</integer>
+    <integer name="grid_span_shorts">4</integer>
+</resources>

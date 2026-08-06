@@ -1,0 +1,91 @@
+apply from: gradle.ext.sharedModulesConstants
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    compileSdkVersion project.properties.compileSdkVersion
+    buildToolsVersion project.properties.buildToolsVersion
+
+    defaultConfig {
+        applicationId "app.smarttube.phone"
+        minSdkVersion 21
+        targetSdkVersion project.properties.compileSdkVersion
+        // Bump both when shipping a new phone build (APK name uses versionName).
+        versionCode 6
+        versionName "v.006"
+        multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    flavorDimensions "default"
+
+    productFlavors {
+        stbeta {
+            applicationId "app.smarttube.phone.beta"
+        }
+        ststable {
+            applicationId "app.smarttube.phone"
+        }
+        stfdroid {
+            applicationId "app.smarttube.phone.fdroid"
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+        disable 'MissingTranslation'
+    }
+
+    // Output: smarttubephone-ststable-v.001.apk
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "smarttubephone-${variant.flavorName}-${variant.versionName}.apk"
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation project(':common')
+    implementation project(':sharedutils')
+    implementation project(':mediaserviceinterfaces')
+    implementation project(':youtubeapi')
+    implementation project(':exoplayer-library')
+    implementation project(':exoplayer-library-ui')
+    implementation project(':exoplayer-extension-okhttp')
+    implementation project(':fragment-1.1.0')
+    implementation project(':slidableactivity')
+    implementation project(':filepicker-lib')
+
+    implementation 'androidx.appcompat:appcompat:' + appCompatXVersion
+    implementation 'androidx.recyclerview:recyclerview:' + recyclerviewXVersion
+    implementation 'androidx.constraintlayout:constraintlayout:' + constraintLayoutXVersion
+    implementation 'androidx.cardview:cardview:' + cardviewXVersion
+    implementation 'com.google.android.material:material:' + materialVersion
+    implementation 'androidx.drawerlayout:drawerlayout:1.1.1'
+    implementation 'androidx.multidex:multidex:' + multiDexVersion
+    implementation 'androidx.media:media:' + mediaXVersion
+
+    implementation 'com.github.bumptech.glide:glide:' + glideVersion
+
+    implementation 'io.reactivex.rxjava2:rxandroid:' + rxAndroidVersion
+    implementation 'io.reactivex.rxjava2:rxjava:' + rxJavaVersion
+
+    implementation 'androidx.core:core-ktx:' + kotlinCoreXVersion
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:' + kotlinVersion
+
+    implementation 'org.conscrypt:conscrypt-android:' + conscryptVersion
+}
