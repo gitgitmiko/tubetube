@@ -52,6 +52,7 @@ class ShortsFeedActivity : PhoneBaseActivity() {
     private var currentVideoId: String? = null
     private var loadingVideoId: String? = null
     private var pageSettledRunnable: Runnable? = null
+    private lateinit var snapHelper: PagerSnapHelper
 
     private val sessionListener = { refreshFromSession() }
 
@@ -70,14 +71,19 @@ class ShortsFeedActivity : PhoneBaseActivity() {
         pager.layoutManager = lm
         pager.adapter = adapter
         pager.setHasFixedSize(true)
+        pager.setItemViewCacheSize(3)
         pager.itemAnimator = null
-        PagerSnapHelper().attachToRecyclerView(pager)
+        snapHelper = PagerSnapHelper()
+        snapHelper.attachToRecyclerView(pager)
 
         pager.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    schedulePageSettle()
+                if (newState != RecyclerView.SCROLL_STATE_IDLE) {
+                    pageSettledRunnable?.let { pager.removeCallbacks(it) }
+                    player?.playWhenReady = false
+                    return
                 }
+                schedulePageSettle()
             }
         })
 
@@ -118,14 +124,11 @@ class ShortsFeedActivity : PhoneBaseActivity() {
     private fun refreshFromSession(scrollToStart: Boolean = false) {
         val items = ShortsFeedSession.snapshot()
         adapter.submit(items)
-        footerProgress.visibility =
-            if (ShortsFeedSession.loadingMore) View.VISIBLE else View.GONE
+        footerProgress.visibility = View.GONE
         if (scrollToStart && items.isNotEmpty()) {
             val index = ShortsFeedSession.startIndex.coerceIn(0, items.lastIndex)
             pager.scrollToPosition(index)
             pager.post { playAt(index, force = true) }
-        } else if (currentIndex >= items.size && items.isNotEmpty()) {
-            playAt(items.lastIndex, force = true)
         }
         maybeRequestMore(currentIndex.coerceAtLeast(0))
     }
@@ -133,18 +136,26 @@ class ShortsFeedActivity : PhoneBaseActivity() {
     private fun schedulePageSettle() {
         pageSettledRunnable?.let { pager.removeCallbacks(it) }
         val r = Runnable {
-            val lm = pager.layoutManager as? LinearLayoutManager ?: return@Runnable
-            val index = lm.findFirstCompletelyVisibleItemPosition()
-                .takeIf { it != RecyclerView.NO_POSITION }
-                ?: lm.findFirstVisibleItemPosition()
+            val index = snappedIndex()
             if (index != RecyclerView.NO_POSITION) {
                 playAt(index, force = false)
                 maybeRequestMore(index)
             }
         }
         pageSettledRunnable = r
-        // Debounce rapid flings while still loading.
-        pager.postDelayed(r, 120)
+        pager.post(r)
+    }
+
+    private fun snappedIndex(): Int {
+        val lm = pager.layoutManager as? LinearLayoutManager ?: return RecyclerView.NO_POSITION
+        val snapView = snapHelper.findSnapView(lm)
+        if (snapView != null) {
+            val pos = lm.getPosition(snapView)
+            if (pos != RecyclerView.NO_POSITION) return pos
+        }
+        return lm.findFirstCompletelyVisibleItemPosition()
+            .takeIf { it != RecyclerView.NO_POSITION }
+            ?: lm.findFirstVisibleItemPosition()
     }
 
     private fun maybeRequestMore(index: Int) {
@@ -153,7 +164,7 @@ class ShortsFeedActivity : PhoneBaseActivity() {
         if (index < size - 3) return
         val last = ShortsFeedSession.getOrNull(size - 1) ?: return
         ShortsFeedSession.loadingMore = true
-        footerProgress.visibility = View.VISIBLE
+        footerProgress.visibility = View.GONE
         try {
             BrowsePresenter.instance(this).onScrollEnd(last)
         } catch (e: Exception) {
@@ -173,12 +184,11 @@ class ShortsFeedActivity : PhoneBaseActivity() {
             player?.repeatMode = Player.REPEAT_MODE_ONE
             player?.addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    if (playbackState != Player.STATE_READY) return
                     val holder = findHolder(currentIndex) ?: return
-                    holder.loading.visibility =
-                        if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-                    if (playbackState == Player.STATE_READY) {
-                        holder.thumb.visibility = View.GONE
-                    }
+                    attachPlayerTo(currentIndex)
+                    holder.loading.visibility = View.GONE
+                    holder.thumb.visibility = View.GONE
                 }
             })
         } catch (e: Exception) {
@@ -202,31 +212,49 @@ class ShortsFeedActivity : PhoneBaseActivity() {
 
     private fun playAt(index: Int, force: Boolean) {
         val video = adapter.getVideo(index) ?: return
-        if (!force && index == currentIndex && video.videoId == currentVideoId && player?.playbackState == Player.STATE_READY) {
-            player?.playWhenReady = true
+        val videoId = video.videoId
+        if (!force && index == currentIndex && videoId == currentVideoId) {
+            when {
+                player?.playbackState == Player.STATE_READY -> {
+                    attachPlayerTo(index)
+                    player?.playWhenReady = true
+                }
+                videoId == loadingVideoId -> { }
+                else -> {
+                    showPoster(index, loading = true)
+                    loadingVideoId = videoId
+                    loadAndPlay(video)
+                }
+            }
             return
         }
-        if (!force && video.videoId != null && video.videoId == loadingVideoId) {
+        if (!force && !videoId.isNullOrBlank() && videoId == loadingVideoId) {
             return
         }
+        if (videoId.isNullOrBlank()) return
 
         currentIndex = index
-        attachPlayerTo(index)
-
-        val videoId = video.videoId
-        if (videoId.isNullOrBlank()) return
-        if (!force && videoId == currentVideoId && player?.containsMedia() == true) {
-            player?.playWhenReady = true
-            return
-        }
-
+        adapter.playingIndex = index
         currentVideoId = videoId
         loadingVideoId = videoId
+
+        detachPlayerView()
+        try {
+            player?.playWhenReady = false
+            player?.stop(true)
+        } catch (_: Exception) {
+        }
+
+        showPoster(index, loading = true)
         loadAndPlay(video)
     }
 
-    private fun SimpleExoPlayer.containsMedia(): Boolean =
-        playbackState != Player.STATE_IDLE
+    private fun showPoster(index: Int, loading: Boolean) {
+        val holder = findHolder(index) ?: return
+        holder.thumb.visibility = View.VISIBLE
+        holder.loading.visibility = if (loading) View.VISIBLE else View.GONE
+        holder.playerView.player = null
+    }
 
     private fun loadAndPlay(video: Video) {
         val exo = player ?: return
@@ -247,6 +275,7 @@ class ShortsFeedActivity : PhoneBaseActivity() {
                 openFormat(exo, factory, info)
             }, { error ->
                 Log.e(TAG, "format load error", error)
+                if (videoId != currentVideoId) return@subscribe
                 loadingVideoId = null
                 findHolder(currentIndex)?.loading?.visibility = View.GONE
             })
@@ -269,7 +298,7 @@ class ShortsFeedActivity : PhoneBaseActivity() {
                 findHolder(currentIndex)?.loading?.visibility = View.GONE
                 return
             }
-            exo.prepare(source)
+            exo.prepare(source, true, true)
             exo.playWhenReady = true
         } catch (e: Exception) {
             Log.e(TAG, "openFormat failed", e)
@@ -296,8 +325,19 @@ class ShortsFeedActivity : PhoneBaseActivity() {
 
     private class ShortsPagerAdapter : RecyclerView.Adapter<ShortsPagerAdapter.Holder>() {
         private val items = mutableListOf<Video>()
+        var playingIndex: Int = RecyclerView.NO_POSITION
 
         fun submit(videos: List<Video>) {
+            if (items.size > 0 && videos.size >= items.size) {
+                val samePrefix = items.indices.all { items[it].videoId == videos[it].videoId }
+                if (samePrefix) {
+                    if (videos.size == items.size) return
+                    val start = items.size
+                    items.addAll(videos.subList(start, videos.size))
+                    notifyItemRangeInserted(start, videos.size - start)
+                    return
+                }
+            }
             items.clear()
             items.addAll(videos)
             notifyDataSetChanged()
@@ -319,8 +359,11 @@ class ShortsFeedActivity : PhoneBaseActivity() {
             val video = items[position]
             holder.title.text = video.title ?: ""
             holder.channel.text = video.author ?: video.secondTitle ?: ""
-            holder.thumb.visibility = View.VISIBLE
-            holder.loading.visibility = View.GONE
+            if (position != playingIndex) {
+                holder.playerView.player = null
+                holder.thumb.visibility = View.VISIBLE
+                holder.loading.visibility = View.GONE
+            }
             Glide.with(holder.thumb.context)
                 .load(video.cardImageUrl)
                 .centerCrop()

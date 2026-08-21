@@ -393,6 +393,7 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
     }
 
     private fun requestMore(video: Video) {
+        if (isShortsSection() && ShortsFeedSession.loadingMore) return
         val now = System.currentTimeMillis()
         if (now - lastScrollEndAt < 700) return
         lastScrollEndAt = now

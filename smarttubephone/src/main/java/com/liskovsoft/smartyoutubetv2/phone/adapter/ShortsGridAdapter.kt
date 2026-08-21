@@ -74,7 +74,7 @@ class ShortsGridAdapter(
         }
         if (position >= items.size - 4) {
             val now = System.currentTimeMillis()
-            if (now - lastNearEndAt > 800) {
+            if (now - lastNearEndAt > 1_200) {
                 lastNearEndAt = now
                 onNearEnd()
             }

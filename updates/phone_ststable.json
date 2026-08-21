@@ -2,6 +2,13 @@
   "package": {
     "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
   },
+  "v.011": {
+    "versionCode": 11,
+    "changelog": [
+      "Smoother Shorts swipe: no leftover previous video",
+      "Fix double loading when scrolling Shorts"
+    ]
+  },
   "v.010": {
     "versionCode": 10,
     "changelog": [
