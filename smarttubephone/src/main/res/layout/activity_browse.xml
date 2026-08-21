@@ -43,6 +43,8 @@
             android:clickable="true"
             android:contentDescription="@string/nav_account"
             android:focusable="true"
+            android:padding="8dp"
+            android:scaleType="centerInside"
             android:src="@drawable/ic_account" />
     </LinearLayout>
 

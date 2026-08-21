@@ -65,9 +65,8 @@ object VideoCardBinder {
         onLongClick: ((Video) -> Unit)?
     ) {
         holder.title.text = video.title
-        val subtitle = video.getAuthor()?.takeIf { it.isNotBlank() }
-            ?: video.secondTitle?.toString().orEmpty()
-        holder.subtitle.text = subtitle
+        holder.subtitle.text = video.getSecondTitleFull()?.toString()?.takeIf { it.isNotBlank() }
+            ?: video.getAuthor().orEmpty()
         Glide.with(holder.image)
             .load(video.cardImageUrl)
             .centerCrop()

@@ -4,12 +4,14 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.bumptech.glide.Glide
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection
@@ -24,6 +26,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.SearchPresenter
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.VideoActionPresenter
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.settings.AccountSettingsPresenter
 import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView
+import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager
 import com.liskovsoft.smartyoutubetv2.phone.R
 import com.liskovsoft.smartyoutubetv2.phone.adapter.BrowseContentAdapter
 import com.liskovsoft.smartyoutubetv2.phone.adapter.ChipAdapter
@@ -46,6 +49,11 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
     private lateinit var chipList: RecyclerView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var accountButton: ImageButton
+
+    private val accountChangeListener = MediaServiceManager.AccountChangeListener {
+        runOnUiThread { bindAccountAvatar() }
+    }
 
     private lateinit var sectionAdapter: SectionAdapter
     private lateinit var chipAdapter: ChipAdapter
@@ -88,9 +96,12 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
         findViewById<ImageButton>(R.id.btn_search).setOnClickListener {
             SearchPresenter.instance(this).startSearch(null)
         }
-        findViewById<ImageButton>(R.id.btn_account).setOnClickListener {
+        accountButton = findViewById(R.id.btn_account)
+        accountButton.setOnClickListener {
             AccountSettingsPresenter.instance(this).show()
         }
+        MediaServiceManager.instance().addAccountListener(accountChangeListener)
+        bindAccountAvatar()
 
         sectionAdapter = SectionAdapter { section, index ->
             applySection(section, index)
@@ -408,6 +419,7 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
     override fun onResume() {
         super.onResume()
         presenter.onViewResumed()
+        bindAccountAvatar()
     }
 
     override fun onPause() {
@@ -416,8 +428,27 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
     }
 
     override fun onDestroy() {
+        MediaServiceManager.instance().removeAccountListener(accountChangeListener)
         super.onDestroy()
         presenter.onViewDestroyed()
+    }
+
+    private fun bindAccountAvatar() {
+        if (isDestroyed) return
+        val url = MediaServiceManager.instance().selectedAccount?.avatarImageUrl
+        if (url.isNullOrBlank()) {
+            Glide.with(this).clear(accountButton)
+            accountButton.scaleType = ImageView.ScaleType.CENTER_INSIDE
+            accountButton.setImageResource(R.drawable.ic_account)
+            return
+        }
+        accountButton.scaleType = ImageView.ScaleType.CENTER_CROP
+        Glide.with(this)
+            .load(url)
+            .circleCrop()
+            .placeholder(R.drawable.ic_account)
+            .error(R.drawable.ic_account)
+            .into(accountButton)
     }
 
     override fun addSection(index: Int, section: BrowseSection?) {
