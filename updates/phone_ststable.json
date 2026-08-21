@@ -1,0 +1,14 @@
+{
+  "package": {
+    "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
+  },
+  "v.007": {
+    "versionCode": 7,
+    "changelog": [
+      "YouTube-like phone Home, chips, and bottom navigation",
+      "Fix account button (sign-in dialog)",
+      "Play Music mixes and Live shelves",
+      "Comments, Watch later, downloads, mini player"
+    ]
+  }
+}

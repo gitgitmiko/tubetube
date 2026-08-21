@@ -16,8 +16,8 @@ android {
         minSdkVersion 21
         targetSdkVersion project.properties.compileSdkVersion
         // Bump both when shipping a new phone build (APK name uses versionName).
-        versionCode 6
-        versionName "v.006"
+        versionCode 7
+        versionName "v.007"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -76,6 +76,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:' + cardviewXVersion
     implementation 'com.google.android.material:material:' + materialVersion
     implementation 'androidx.drawerlayout:drawerlayout:1.1.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.multidex:multidex:' + multiDexVersion
     implementation 'androidx.media:media:' + mediaXVersion
 

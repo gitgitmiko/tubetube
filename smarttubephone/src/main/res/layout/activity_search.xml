@@ -20,7 +20,10 @@
         android:id="@+id/search_field_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp"
         app:boxBackgroundMode="outline">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -40,11 +43,16 @@
         android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/suggestions_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/results_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:padding="@dimen/content_padding" />
+            android:clipToPadding="false" />
 
         <ProgressBar
             android:id="@+id/progress_bar"

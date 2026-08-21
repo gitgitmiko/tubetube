@@ -4,7 +4,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsItem
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video
@@ -12,9 +11,9 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup
 import com.liskovsoft.smartyoutubetv2.phone.R
 
 sealed class BrowseContentItem {
-    data class VideoRow(val groupId: Int, var title: String?, var videos: MutableList<Video>) : BrowseContentItem()
-    data class VideoGrid(val videos: MutableList<Video>) : BrowseContentItem()
-    data class SettingsList(val items: List<SettingsItem>) : BrowseContentItem()
+    data class Header(val title: String) : BrowseContentItem()
+    data class VideoItem(val video: Video) : BrowseContentItem()
+    data class SettingsItemRow(val item: SettingsItem) : BrowseContentItem()
 }
 
 class BrowseContentAdapter(
@@ -23,213 +22,164 @@ class BrowseContentAdapter(
     private val onScrollEnd: (Video) -> Unit,
     private val onSettingsClick: (SettingsItem) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    private data class RowBucket(var title: String?, val videos: MutableList<Video>)
+
+    private val rows = linkedMapOf<Int, RowBucket>()
+    private val gridVideos = mutableListOf<Video>()
+    private var settings = emptyList<SettingsItem>()
     private val items = mutableListOf<BrowseContentItem>()
+    private var asGrid = false
+    private var asSettings = false
+    private var lastScrollAt = 0L
 
     fun clear() {
+        rows.clear()
+        gridVideos.clear()
+        settings = emptyList()
+        asGrid = false
+        asSettings = false
         items.clear()
         notifyDataSetChanged()
     }
 
-    fun showSettings(settings: List<SettingsItem>) {
-        items.clear()
-        items.add(BrowseContentItem.SettingsList(settings))
-        notifyDataSetChanged()
+    fun showSettings(values: List<SettingsItem>) {
+        rows.clear()
+        gridVideos.clear()
+        settings = values
+        asSettings = true
+        asGrid = false
+        rebuild()
     }
 
-    fun applyVideoGroup(group: VideoGroup, asGrid: Boolean) {
+    fun applyVideoGroup(group: VideoGroup, grid: Boolean) {
+        asSettings = false
+        asGrid = grid
+        settings = emptyList()
         val videos = group.videos ?: emptyList()
         when (group.action) {
             VideoGroup.ACTION_REPLACE -> {
-                items.clear()
-                if (asGrid) {
-                    items.add(BrowseContentItem.VideoGrid(videos.toMutableList()))
+                rows.clear()
+                gridVideos.clear()
+                if (grid) {
+                    gridVideos.addAll(videos)
                 } else {
-                    items.add(
-                        BrowseContentItem.VideoRow(
-                            group.id,
-                            group.title,
-                            videos.toMutableList()
-                        )
-                    )
+                    rows[group.id] = RowBucket(group.title, videos.toMutableList())
                 }
-                notifyDataSetChanged()
             }
             VideoGroup.ACTION_PREPEND -> {
-                if (asGrid) {
-                    val grid = items.filterIsInstance<BrowseContentItem.VideoGrid>().firstOrNull()
-                    if (grid != null) {
-                        grid.videos.addAll(0, videos)
-                        notifyDataSetChanged()
-                    } else {
-                        items.add(0, BrowseContentItem.VideoGrid(videos.toMutableList()))
-                        notifyItemInserted(0)
-                    }
+                if (grid) {
+                    gridVideos.addAll(0, videos)
                 } else {
-                    val row = items.filterIsInstance<BrowseContentItem.VideoRow>()
-                        .firstOrNull { it.groupId == group.id }
-                    if (row != null) {
-                        row.videos.addAll(0, videos)
-                        notifyDataSetChanged()
+                    val bucket = rows[group.id]
+                    if (bucket != null) {
+                        bucket.videos.addAll(0, videos)
+                        if (group.title != null) bucket.title = group.title
                     } else {
-                        items.add(
-                            0,
-                            BrowseContentItem.VideoRow(group.id, group.title, videos.toMutableList())
-                        )
-                        notifyItemInserted(0)
+                        val rebuilt = linkedMapOf<Int, RowBucket>()
+                        rebuilt[group.id] = RowBucket(group.title, videos.toMutableList())
+                        rebuilt.putAll(rows)
+                        rows.clear()
+                        rows.putAll(rebuilt)
                     }
                 }
             }
-            else -> { // APPEND and others
-                if (asGrid) {
-                    val grid = items.filterIsInstance<BrowseContentItem.VideoGrid>().firstOrNull()
-                    if (grid != null) {
-                        val start = grid.videos.size
-                        grid.videos.addAll(videos)
-                        notifyItemChanged(items.indexOf(grid))
-                    } else {
-                        items.add(BrowseContentItem.VideoGrid(videos.toMutableList()))
-                        notifyItemInserted(items.size - 1)
-                    }
+            else -> {
+                if (grid) {
+                    gridVideos.addAll(videos)
                 } else {
-                    val existingIndex = items.indexOfFirst {
-                        it is BrowseContentItem.VideoRow && it.groupId == group.id
-                    }
-                    if (existingIndex >= 0) {
-                        val row = items[existingIndex] as BrowseContentItem.VideoRow
-                        row.videos.addAll(videos)
-                        if (group.title != null) row.title = group.title
-                        notifyItemChanged(existingIndex)
+                    val bucket = rows[group.id]
+                    if (bucket != null) {
+                        bucket.videos.addAll(videos)
+                        if (group.title != null) bucket.title = group.title
                     } else {
-                        items.add(
-                            BrowseContentItem.VideoRow(
-                                group.id,
-                                group.title,
-                                videos.toMutableList()
-                            )
-                        )
-                        notifyItemInserted(items.size - 1)
+                        rows[group.id] = RowBucket(group.title, videos.toMutableList())
                     }
                 }
             }
         }
+        rebuild()
     }
 
     fun isEmptyContent(): Boolean = items.isEmpty()
 
+    private fun rebuild() {
+        items.clear()
+        when {
+            asSettings -> settings.forEach { items.add(BrowseContentItem.SettingsItemRow(it)) }
+            asGrid -> gridVideos.forEach { items.add(BrowseContentItem.VideoItem(it)) }
+            else -> {
+                rows.values.forEach { bucket ->
+                    if (!bucket.title.isNullOrBlank()) {
+                        items.add(BrowseContentItem.Header(bucket.title!!))
+                    }
+                    bucket.videos.forEach { items.add(BrowseContentItem.VideoItem(it)) }
+                }
+            }
+        }
+        notifyDataSetChanged()
+    }
+
     override fun getItemViewType(position: Int): Int = when (items[position]) {
-        is BrowseContentItem.VideoRow -> TYPE_ROW
-        is BrowseContentItem.VideoGrid -> TYPE_GRID
-        is BrowseContentItem.SettingsList -> TYPE_SETTINGS
+        is BrowseContentItem.Header -> TYPE_HEADER
+        is BrowseContentItem.VideoItem -> TYPE_VIDEO
+        is BrowseContentItem.SettingsItemRow -> TYPE_SETTINGS
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
-            TYPE_ROW -> RowHolder(inflater.inflate(R.layout.item_video_row, parent, false))
-            TYPE_GRID -> GridHolder(RecyclerView(parent.context).apply {
-                layoutParams = RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                layoutManager = androidx.recyclerview.widget.GridLayoutManager(
-                    context,
-                    com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics.videoGridSpan(context)
-                )
-                isNestedScrollingEnabled = false
-            })
-            else -> SettingsHolder(RecyclerView(parent.context).apply {
-                layoutParams = RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                layoutManager = LinearLayoutManager(context)
-                isNestedScrollingEnabled = false
-            })
+            TYPE_HEADER -> HeaderHolder(inflater.inflate(R.layout.item_row_header, parent, false))
+            TYPE_VIDEO -> {
+                val view = inflater.inflate(R.layout.item_video_card, parent, false)
+                VideoCardAdapter.Holder(view)
+            }
+            else -> SettingsHolder(inflater.inflate(R.layout.item_settings, parent, false))
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
-            is BrowseContentItem.VideoRow -> {
-                val rowHolder = holder as RowHolder
-                rowHolder.title.text = item.title ?: ""
-                rowHolder.title.visibility = if (item.title.isNullOrBlank()) View.GONE else View.VISIBLE
-                val adapter = VideoCardAdapter(onVideoClick, onVideoLongClick)
-                adapter.submit(item.videos, true)
-                rowHolder.list.layoutManager =
-                    LinearLayoutManager(rowHolder.list.context, LinearLayoutManager.HORIZONTAL, false)
-                rowHolder.list.adapter = adapter
-                rowHolder.list.clearOnScrollListeners()
-                rowHolder.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                        val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
-                        val last = lm.findLastVisibleItemPosition()
-                        if (last >= item.videos.size - 3 && item.videos.isNotEmpty()) {
-                            onScrollEnd(item.videos.last())
-                        }
-                    }
-                })
+            is BrowseContentItem.Header -> {
+                (holder as HeaderHolder).title.text = item.title
             }
-            is BrowseContentItem.VideoGrid -> {
-                val gridHolder = holder as GridHolder
-                val adapter = VideoCardAdapter(onVideoClick, onVideoLongClick)
-                adapter.submit(item.videos, true)
-                gridHolder.list.adapter = adapter
-                gridHolder.list.clearOnScrollListeners()
-                gridHolder.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                        val lm = recyclerView.layoutManager as? androidx.recyclerview.widget.GridLayoutManager
-                            ?: return
-                        val last = lm.findLastVisibleItemPosition()
-                        if (last >= item.videos.size - 4 && item.videos.isNotEmpty()) {
-                            onScrollEnd(item.videos.last())
-                        }
-                    }
-                })
+            is BrowseContentItem.VideoItem -> {
+                VideoCardBinder.bind(
+                    holder as VideoCardAdapter.Holder,
+                    item.video,
+                    onVideoClick,
+                    onVideoLongClick
+                )
+                maybeRequestMore(position, item.video)
             }
-            is BrowseContentItem.SettingsList -> {
+            is BrowseContentItem.SettingsItemRow -> {
                 val settingsHolder = holder as SettingsHolder
-                settingsHolder.list.adapter = SettingsItemAdapter(item.items, onSettingsClick)
+                settingsHolder.title.text = item.item.title
+                settingsHolder.itemView.setOnClickListener { onSettingsClick(item.item) }
             }
         }
     }
 
-    override fun getItemCount(): Int = items.size
-
-    class RowHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val title: TextView = view.findViewById(R.id.row_title)
-        val list: RecyclerView = view.findViewById(R.id.row_list)
+    private fun maybeRequestMore(position: Int, video: Video) {
+        if (position < items.size - 4) return
+        val now = System.currentTimeMillis()
+        if (now - lastScrollAt < 700) return
+        lastScrollAt = now
+        onScrollEnd(video)
     }
 
-    class GridHolder(val list: RecyclerView) : RecyclerView.ViewHolder(list)
+    override fun getItemCount(): Int = items.size
 
-    class SettingsHolder(val list: RecyclerView) : RecyclerView.ViewHolder(list)
+    class HeaderHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val title: TextView = view.findViewById(R.id.row_title)
+    }
+
+    class SettingsHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val title: TextView = view.findViewById(R.id.settings_title)
+    }
 
     companion object {
-        private const val TYPE_ROW = 1
-        private const val TYPE_GRID = 2
+        private const val TYPE_HEADER = 1
+        private const val TYPE_VIDEO = 2
         private const val TYPE_SETTINGS = 3
-    }
-}
-
-class SettingsItemAdapter(
-    private val items: List<SettingsItem>,
-    private val onClick: (SettingsItem) -> Unit
-) : RecyclerView.Adapter<SettingsItemAdapter.Holder>() {
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_settings, parent, false)
-        return Holder(view)
-    }
-
-    override fun onBindViewHolder(holder: Holder, position: Int) {
-        val item = items[position]
-        holder.title.text = item.title
-        holder.itemView.setOnClickListener { onClick(item) }
-    }
-
-    override fun getItemCount(): Int = items.size
-
-    class Holder(view: View) : RecyclerView.ViewHolder(view) {
-        val title: TextView = view.findViewById(R.id.settings_title)
     }
 }

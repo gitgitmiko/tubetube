@@ -55,10 +55,7 @@ class SignInActivity : PhoneBaseActivity(), SignInView {
     override fun showCode(userCode: String?, signInUrl: String?, fullSignInUrl: String?) {
         codeView.text = userCode ?: ""
         this.fullSignInUrl = fullSignInUrl ?: signInUrl
-        descriptionView.text = getString(
-            com.liskovsoft.smartyoutubetv2.common.R.string.signin_view_description,
-            signInUrl ?: ""
-        )
+        descriptionView.text = getString(R.string.signin_phone_description)
         val qrUrl = Utils.toQrCodeLink(this.fullSignInUrl)
         if (!qrUrl.isNullOrBlank()) {
             Glide.with(this).load(qrUrl).into(qrView)

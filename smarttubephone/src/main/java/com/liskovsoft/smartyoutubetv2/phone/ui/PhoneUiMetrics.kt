@@ -9,8 +9,10 @@ import android.widget.FrameLayout
 import com.liskovsoft.smartyoutubetv2.phone.R
 
 object PhoneUiMetrics {
-    fun videoGridSpan(context: Context): Int =
-        context.resources.getInteger(R.integer.grid_span_video).coerceAtLeast(1)
+    fun videoGridSpan(context: Context): Int {
+        val configured = context.resources.getInteger(R.integer.grid_span_video).coerceAtLeast(1)
+        return if (!isTablet(context)) 1 else configured
+    }
 
     fun shortsGridSpan(context: Context): Int =
         context.resources.getInteger(R.integer.grid_span_shorts).coerceAtLeast(1)

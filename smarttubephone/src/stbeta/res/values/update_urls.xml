@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="update_urls">
+        <item>https://raw.githubusercontent.com/gitgitmiko/tubetube/main/updates/phone_ststable.json</item>
+        <item>https://github.com/gitgitmiko/tubetube/releases/latest/download/phone_ststable.json</item>
+    </string-array>
+</resources>

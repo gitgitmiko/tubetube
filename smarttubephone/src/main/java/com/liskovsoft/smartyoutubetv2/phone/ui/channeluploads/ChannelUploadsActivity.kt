@@ -3,7 +3,7 @@ package com.liskovsoft.smartyoutubetv2.phone.ui.channeluploads
 import android.os.Bundle
 import android.view.View
 import android.widget.ProgressBar
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup
@@ -34,13 +34,12 @@ class ChannelUploadsActivity : PhoneBaseActivity(), ChannelUploadsView {
             onClick = { presenter.onVideoItemClicked(it) },
             onLongClick = { presenter.onVideoItemLongClicked(it) }
         )
-        contentList.layoutManager =
-            GridLayoutManager(this, com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics.videoGridSpan(this))
+        contentList.layoutManager = LinearLayoutManager(this)
         contentList.adapter = adapter
         com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics.applyCenteredMaxWidth(contentList)
         contentList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                val lm = recyclerView.layoutManager as GridLayoutManager
+                val lm = recyclerView.layoutManager as LinearLayoutManager
                 val last = lm.findLastVisibleItemPosition()
                 val items = adapter.items()
                 if (items.isNotEmpty() && last >= items.size - 4) {

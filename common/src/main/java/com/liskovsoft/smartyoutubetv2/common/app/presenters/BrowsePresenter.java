@@ -304,8 +304,8 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
         int bootSectionId = getSidebarService().getBootSectionId();
 
-        // Empty Home on first run fix. Switch to something non-empty.
-        if (!getSignInService().isSigned() && VideoStateService.instance(getContext()).isEmpty()) {
+        // TV: empty Home on first run. Phone UI always starts on Home.
+        if (!isPhoneUi() && !getSignInService().isSigned() && VideoStateService.instance(getContext()).isEmpty()) {
             bootSectionId = MediaGroup.TYPE_MUSIC;
         }
 
@@ -1078,6 +1078,11 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
 
     public boolean isHomeSection() {
         return isSection(MediaGroup.TYPE_HOME);
+    }
+
+    private boolean isPhoneUi() {
+        Context ctx = getContext();
+        return ctx != null && ctx.getPackageName() != null && ctx.getPackageName().contains(".phone");
     }
 
     public boolean isHistorySection() {

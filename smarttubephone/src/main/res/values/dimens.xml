@@ -9,8 +9,8 @@
 
     <dimen name="video_card_width">160dp</dimen>
     <dimen name="video_card_image_height">90dp</dimen>
-    <dimen name="video_card_title_size">13sp</dimen>
-    <dimen name="video_card_subtitle_size">11sp</dimen>
+    <dimen name="video_card_title_size">14sp</dimen>
+    <dimen name="video_card_subtitle_size">12sp</dimen>
 
     <dimen name="shorts_card_height">220dp</dimen>
     <dimen name="shorts_card_title_size">12sp</dimen>
@@ -19,6 +19,6 @@
     <dimen name="row_title_size">16sp</dimen>
     <dimen name="search_field_max_width">0dp</dimen>
 
-    <integer name="grid_span_video">2</integer>
+    <integer name="grid_span_video">1</integer>
     <integer name="grid_span_shorts">2</integer>
 </resources>

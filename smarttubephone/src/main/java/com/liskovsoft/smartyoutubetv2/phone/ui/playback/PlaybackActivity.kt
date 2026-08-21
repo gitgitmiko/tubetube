@@ -4,6 +4,11 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.ViewGroup
 import android.util.Log
 import android.util.SparseIntArray
 import android.view.View
@@ -29,7 +34,9 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.ChatReceiver
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.SeekBarSegment
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.PlaybackPresenter
+import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView
 import com.liskovsoft.smartyoutubetv2.common.app.views.PlaybackView
+import com.liskovsoft.smartyoutubetv2.common.app.views.ViewManager
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.ExoPlayerController
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.PlayerView as ExoQualityView
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.other.ExoPlayerInitializer
@@ -41,6 +48,12 @@ import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerData
 import com.liskovsoft.smartyoutubetv2.common.utils.AppDialogUtil
 import com.liskovsoft.smartyoutubetv2.phone.R
 import com.liskovsoft.smartyoutubetv2.phone.adapter.VideoCardAdapter
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.settings.RemoteControlSettingsPresenter
+import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager
+import com.liskovsoft.smartyoutubetv2.common.utils.Utils
+import com.liskovsoft.smartyoutubetv2.phone.downloads.PhoneDownloadStore
+import com.liskovsoft.smartyoutubetv2.phone.player.PhonePlaybackBridge
+import com.liskovsoft.smartyoutubetv2.phone.ui.comments.CommentsSheet
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics
 import java.io.InputStream
@@ -58,6 +71,14 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     private lateinit var playerActions: View
     private lateinit var btnFullscreen: MaterialButton
     private lateinit var btnResize: MaterialButton
+    private var playerContainer: View? = null
+    private var detailSection: View? = null
+    private var seekHint: TextView? = null
+    private var channelView: TextView? = null
+    private var descriptionView: TextView? = null
+    private var lastFormatInfo: MediaItemFormatInfo? = null
+    private var commentsKey: String? = null
+    private val seekHandler = Handler(Looper.getMainLooper())
 
     private var player: SimpleExoPlayer? = null
     private var currentVideo: Video? = null
@@ -74,6 +95,30 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     private val buttonStates = SparseIntArray()
     private val suggestionGroups = linkedMapOf<Int, VideoGroup>()
     private var seekBarSegments: List<SeekBarSegment> = emptyList()
+
+    private val playbackBridgeHost = object : PhonePlaybackBridge.Host {
+        override fun togglePlayPause() {
+            if (!::exoController.isInitialized) return
+            exoController.setPlayWhenReady(!exoController.playWhenReady)
+        }
+
+        override fun isPlaying(): Boolean =
+            if (::exoController.isInitialized) exoController.isPlaying else false
+
+        override fun expandFromMiniPlayer() {
+            PhonePlaybackBridge.setMinimized(false)
+            blockEngine(false)
+            ViewManager.instance(this@PlaybackActivity).startView(PlaybackView::class.java)
+        }
+
+        override fun closeFromMiniPlayer() {
+            PhonePlaybackBridge.setMinimized(false)
+            blockEngine(false)
+            finishReally()
+        }
+
+        override fun currentVideo(): Video? = currentVideo
+    }
 
     private val playbackStateListener = object : Player.EventListener {
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
@@ -110,8 +155,15 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         playerActions = findViewById(R.id.player_actions)
         btnFullscreen = findViewById(R.id.btn_fullscreen)
         btnResize = findViewById(R.id.btn_resize)
+        playerContainer = findViewById(R.id.player_container)
+        detailSection = findViewById(R.id.detail_section)
+        seekHint = findViewById(R.id.seek_hint)
+        channelView = findViewById(R.id.player_channel)
+        descriptionView = findViewById(R.id.player_description)
 
         setupPlayerHud()
+        setupGestures()
+        setupDetailActions()
         applyPlayerLayout()
 
         playerInitializer = ExoPlayerInitializer(this)
@@ -122,7 +174,8 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
         suggestionsAdapter = VideoCardAdapter(
             onClick = { video -> presenter.onSuggestionItemClicked(video) },
-            onLongClick = { video -> presenter.onSuggestionItemLongClicked(video) }
+            onLongClick = { video -> presenter.onSuggestionItemLongClicked(video) },
+            compact = true
         )
         val tabletLand = PhoneUiMetrics.isTablet(this) &&
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -157,6 +210,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         }
 
         presenter.onViewInitialized()
+        PhonePlaybackBridge.attach(playbackBridgeHost)
     }
 
     private fun ensureDefault1080p() {
@@ -176,8 +230,13 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
                 val visible = visibility == View.VISIBLE
                 controlsShown = visible
                 overlayShown = visible
-                titleView.visibility = if (visible) View.VISIBLE else View.GONE
-                playerActions.visibility = if (visible) View.VISIBLE else View.GONE
+                val overlayParent = playerContainer
+                if (titleView.parent == overlayParent) {
+                    titleView.visibility = if (visible) View.VISIBLE else View.GONE
+                }
+                if (playerActions.parent == overlayParent || (playerActions.parent as? View)?.parent == overlayParent) {
+                    playerActions.visibility = if (visible) View.VISIBLE else View.GONE
+                }
                 if (::presenter.isInitialized) {
                     presenter.onControlsShown(visible)
                 }
@@ -185,8 +244,105 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         )
         // Start with HUD visible so user sees controls immediately.
         playerView.showController()
-        titleView.visibility = View.VISIBLE
-        playerActions.visibility = View.VISIBLE
+        if (titleView.parent == playerContainer) {
+            titleView.visibility = View.VISIBLE
+        }
+        if (playerActions.parent == playerContainer) {
+            playerActions.visibility = View.VISIBLE
+        }
+    }
+
+    private fun setupDetailActions() {
+        findViewById<MaterialButton?>(R.id.btn_like)?.setOnClickListener {
+            presenter.onButtonClicked(
+                com.liskovsoft.smartyoutubetv2.common.R.id.action_thumbs_up,
+                getButtonState(com.liskovsoft.smartyoutubetv2.common.R.id.action_thumbs_up)
+            )
+        }
+        findViewById<MaterialButton?>(R.id.btn_share)?.setOnClickListener {
+            currentVideo?.videoId?.let { Utils.displayShareVideoDialog(this, it) }
+        }
+        findViewById<MaterialButton?>(R.id.btn_watch_later)?.setOnClickListener {
+            currentVideo?.let {
+                MediaServiceManager.instance().addToWatchLaterPlaylist(it)
+                android.widget.Toast.makeText(this, R.string.watch_later_added, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        findViewById<MaterialButton?>(R.id.btn_download)?.setOnClickListener {
+            PhoneDownloadStore.enqueue(this, currentVideo, lastFormatInfo)
+        }
+        findViewById<MaterialButton?>(R.id.btn_comments)?.setOnClickListener {
+            CommentsSheet(this).show(commentsKey)
+        }
+        findViewById<MaterialButton?>(R.id.btn_cast)?.setOnClickListener {
+            RemoteControlSettingsPresenter.instance(this).show()
+        }
+        findViewById<MaterialButton?>(R.id.btn_subtitle)?.setOnClickListener {
+            val formats = getSubtitleFormats()
+            if (formats.isEmpty()) return@setOnClickListener
+            val dialog = AppDialogPresenter.instance(this)
+            formats.forEach { item ->
+                dialog.appendSingleButton(
+                    com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem.from(
+                        item.title ?: item.toString(),
+                        { setFormat(item) },
+                        item.isSelected
+                    )
+                )
+            }
+            dialog.showDialog(getString(R.string.subtitles))
+        }
+        descriptionView?.setOnClickListener {
+            descriptionView?.maxLines = if (descriptionView?.maxLines == 4) Integer.MAX_VALUE else 4
+        }
+        channelView?.setOnClickListener {
+            currentVideo?.let { presenter.onButtonClicked(com.liskovsoft.smartyoutubetv2.common.R.id.action_channel, 0) }
+        }
+    }
+
+    private fun setupGestures() {
+        val detector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = true
+
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                val width = playerView.width.takeIf { it > 0 } ?: return false
+                val delta = if (e.x < width / 2f) -10_000L else 10_000L
+                setPositionMs((getPositionMs() + delta).coerceAtLeast(0))
+                showSeekHint(if (delta < 0) R.string.seek_back else R.string.seek_forward)
+                return true
+            }
+
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 == null) return false
+                val dy = e2.y - e1.y
+                if (dy > 120 && kotlin.math.abs(velocityY) > kotlin.math.abs(velocityX)) {
+                    if (userFullscreen) {
+                        setFullscreen(false)
+                    } else {
+                        minimizeToMiniPlayer()
+                    }
+                    return true
+                }
+                return false
+            }
+        })
+        playerView.setOnTouchListener { _, event ->
+            detector.onTouchEvent(event)
+            false
+        }
+    }
+
+    private fun showSeekHint(textRes: Int) {
+        val hint = seekHint ?: return
+        hint.setText(textRes)
+        hint.visibility = View.VISIBLE
+        seekHandler.removeCallbacksAndMessages(null)
+        seekHandler.postDelayed({ hint.visibility = View.GONE }, 700)
     }
 
     override fun onStart() {
@@ -198,6 +354,8 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun onResume() {
         super.onResume()
+        blockEngine(false)
+        PhonePlaybackBridge.setMinimized(false)
         if ((Util.SDK_INT <= 23 || player == null) && ::presenter.isInitialized) {
             initializePlayer()
         }
@@ -231,6 +389,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun onDestroy() {
         super.onDestroy()
+        PhonePlaybackBridge.detach(playbackBridgeHost)
         maybeReleasePlayer()
         if (::presenter.isInitialized) {
             presenter.onViewDestroyed()
@@ -307,11 +466,25 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun setVideo(item: Video?) {
         currentVideo = item
+        commentsKey = null
         if (::exoController.isInitialized) {
             exoController.setVideo(item)
         }
         if (::titleView.isInitialized) {
             titleView.text = item?.title ?: ""
+        }
+        channelView?.text = item?.author ?: item?.getAuthor() ?: ""
+        descriptionView?.text = item?.description ?: ""
+        if (item != null) {
+            MediaServiceManager.instance().loadMetadata(item) { metadata ->
+                commentsKey = metadata?.commentsKey
+                if (!metadata?.author.isNullOrBlank()) {
+                    channelView?.text = metadata?.author
+                }
+                if (!metadata?.description.isNullOrBlank()) {
+                    descriptionView?.text = metadata?.description
+                }
+            }
         }
     }
 
@@ -366,10 +539,12 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     }
 
     override fun openSabr(formatInfo: MediaItemFormatInfo?) = openAndPlay {
+        lastFormatInfo = formatInfo
         exoController.openSabr(formatInfo)
     }
 
     override fun openDash(formatInfo: MediaItemFormatInfo?) = openAndPlay {
+        lastFormatInfo = formatInfo
         exoController.openDash(formatInfo)
     }
 
@@ -390,6 +565,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     }
 
     override fun openMerged(formatInfo: MediaItemFormatInfo?, hlsPlaylistUrl: String?) = openAndPlay {
+        lastFormatInfo = formatInfo
         exoController.openMerged(formatInfo, hlsPlaylistUrl)
     }
 
@@ -570,13 +746,9 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         playerView.useController = true
         if (show) {
             playerView.showController()
-            titleView.visibility = View.VISIBLE
-            playerActions.visibility = View.VISIBLE
             overlayShown = true
         } else {
             playerView.hideController()
-            titleView.visibility = View.GONE
-            playerActions.visibility = View.GONE
             overlayShown = false
         }
         if (::presenter.isInitialized) {
@@ -638,7 +810,18 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
             setFullscreen(false)
             return
         }
+        if (player != null && currentVideo != null) {
+            minimizeToMiniPlayer()
+            return
+        }
         super.onBackPressed()
+    }
+
+    private fun minimizeToMiniPlayer() {
+        blockEngine(true)
+        PhonePlaybackBridge.attach(playbackBridgeHost)
+        PhonePlaybackBridge.setMinimized(true)
+        ViewManager.instance(this).startView(BrowseView::class.java)
     }
 
     private fun toggleFullscreen() {
@@ -657,7 +840,8 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     private fun isFullscreenUi(): Boolean =
         userFullscreen ||
-            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE &&
+                !PhoneUiMetrics.isTablet(this))
 
     private fun applyPlayerLayout() {
         if (!::playerView.isInitialized || !::suggestionsSection.isInitialized) return
@@ -669,6 +853,16 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
             View.VISIBLE
         } else {
             View.GONE
+        }
+        detailSection?.visibility = if (fullscreen) View.GONE else View.VISIBLE
+        playerContainer?.layoutParams = playerContainer?.layoutParams?.apply {
+            height = if (fullscreen) {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            } else if (detailSection != null) {
+                (220 * resources.displayMetrics.density).toInt()
+            } else {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            }
         }
 
         applyResizeMode()

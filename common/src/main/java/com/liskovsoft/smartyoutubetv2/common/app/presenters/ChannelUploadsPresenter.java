@@ -134,7 +134,7 @@ public class ChannelUploadsPresenter extends BasePresenter<ChannelUploadsView> i
 
     public void openChannel(Video item) {
         // Working with uploads or playlists
-        if (item == null || (!item.hasNestedItems() && !item.hasPlaylist())) {
+        if (item == null || (!item.hasNestedItems() && !item.hasPlaylist() && !item.hasReloadPageKey())) {
             return;
         }
 
@@ -154,9 +154,16 @@ public class ChannelUploadsPresenter extends BasePresenter<ChannelUploadsView> i
     }
 
     public void obtainGroup(Video item, OnMediaGroup callback, OnError onError, OnComplete onComplete) {
-        if (item != null && item.mediaItem != null) {
-            obtainGroup(item.mediaItem, callback, onError, onComplete);
+        if (item == null) {
+            if (onComplete != null) {
+                onComplete.onComplete();
+            }
+            return;
         }
+        if (item.mediaItem == null) {
+            item.mediaItem = SimpleMediaItem.from(item);
+        }
+        obtainGroup(item.mediaItem, callback, onError, onComplete);
     }
 
     public Observable<MediaGroup> obtainUploadsObservable(Video item) {
@@ -175,7 +182,10 @@ public class ChannelUploadsPresenter extends BasePresenter<ChannelUploadsView> i
                item.hasReloadPageKey() ?
                getContentService().getGroupObserve(item.getReloadPageKey()) :
                getMediaItemService().getMetadataObserve(item.videoId, item.playlistId, 0, item.playlistParams)
-                       .flatMap(mediaItemMetadata -> Observable.just(findPlaylistRow(mediaItemMetadata)));
+                       .flatMap(mediaItemMetadata -> {
+                           MediaGroup row = findPlaylistRow(mediaItemMetadata);
+                           return row != null ? Observable.just(row) : Observable.empty();
+                       });
     }
 
     public Video getChannel() {
