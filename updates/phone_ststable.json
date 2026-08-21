@@ -2,6 +2,12 @@
   "package": {
     "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
   },
+  "v.012": {
+    "versionCode": 12,
+    "changelog": [
+      "Fix blank Trending chip on Home"
+    ]
+  },
   "v.011": {
     "versionCode": 11,
     "changelog": [

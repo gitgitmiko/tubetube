@@ -109,6 +109,7 @@ class BrowseContentAdapter(
             asGrid -> gridVideos.forEach { items.add(BrowseContentItem.VideoItem(it)) }
             else -> {
                 rows.values.forEach { bucket ->
+                    if (bucket.videos.isEmpty()) return@forEach
                     if (!bucket.title.isNullOrBlank()) {
                         items.add(BrowseContentItem.Header(bucket.title!!))
                     }

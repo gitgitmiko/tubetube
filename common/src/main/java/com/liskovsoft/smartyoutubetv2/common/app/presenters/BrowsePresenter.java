@@ -309,6 +309,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
             bootSectionId = MediaGroup.TYPE_MUSIC;
         }
 
+        if (isPhoneUi()) {
+            enablePhoneChipSections();
+        }
+
         int index = 0;
 
         for (BrowseSection section : mErrorSections) {
@@ -333,6 +337,24 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         // Refresh and restore last focus
         int selectedSectionIndex = findSectionIndex(mCurrentSection != null ? mCurrentSection.getId() : -1);
         getView().selectSection(selectedSectionIndex != -1 ? selectedSectionIndex : mBootSectionIndex, false);
+    }
+
+    /** Phone chips (Trending, Music, …) must exist even if the TV sidebar hid them. */
+    private void enablePhoneChipSections() {
+        if (mSections == null) {
+            return;
+        }
+        for (BrowseSection section : mSections) {
+            int id = section.getId();
+            if (id == MediaGroup.TYPE_TRENDING
+                    || id == MediaGroup.TYPE_MUSIC
+                    || id == MediaGroup.TYPE_GAMING
+                    || id == MediaGroup.TYPE_NEWS
+                    || id == MediaGroup.TYPE_LIVE
+                    || id == MediaGroup.TYPE_SPORTS) {
+                section.setEnabled(true);
+            }
+        }
     }
 
     private void initPinnedData() {
@@ -738,6 +760,9 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                             for (MediaGroup mediaGroup : mediaGroups) {
                                 if (mediaGroup.isEmpty()) {
                                     Log.e(TAG, "loadRowsHeader: MediaGroup is empty. Group Name: " + mediaGroup.getTitle());
+                                    if (mediaGroup.getNextPageKey() != null || mediaGroup.getChannelId() != null) {
+                                        continueGroup(VideoGroup.from(mediaGroup, section), false);
+                                    }
                                     continue;
                                 }
 

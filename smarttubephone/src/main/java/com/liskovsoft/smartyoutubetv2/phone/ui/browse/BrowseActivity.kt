@@ -210,6 +210,8 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
         switchContentMode(section.type == BrowseSection.TYPE_SHORTS_GRID)
         contentAdapter.clear()
         shortsAdapter.clear()
+        errorText.visibility = View.GONE
+        showProgressBar(true)
         if (section.id == MediaGroup.TYPE_HOME) {
             homeFallbackTried = false
         }
@@ -510,9 +512,9 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
             return false
         }
         homeFallbackTried = true
+        selectedChipId = MediaGroup.TYPE_TRENDING
+        chipAdapter.select(MediaGroup.TYPE_TRENDING)
         openSectionId(MediaGroup.TYPE_TRENDING)
-        chipAdapter.select(MediaGroup.TYPE_HOME)
-        selectedChipId = MediaGroup.TYPE_HOME
         return true
     }
 

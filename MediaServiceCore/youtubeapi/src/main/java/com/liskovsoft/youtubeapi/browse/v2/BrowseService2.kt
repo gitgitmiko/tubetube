@@ -34,7 +34,11 @@ internal open class BrowseService2 {
     }
 
     fun getTrending(): List<MediaGroup?>? {
-        return getBrowseRowsWeb(BrowseApiHelper.getTrendingQuery(AppClient.WEB), MediaGroup.TYPE_TRENDING)
+        val web = getBrowseRowsWeb(BrowseApiHelper.getTrendingQuery(AppClient.WEB), MediaGroup.TYPE_TRENDING)
+        if (web?.any { it != null && !it.isEmpty } == true) {
+            return web
+        }
+        return getBrowseRowsTV(BrowseApiHelper::getTrendingQuery, MediaGroup.TYPE_TRENDING)?.first
     }
 
     fun getSports(): Pair<List<MediaGroup?>?, String?>? {
