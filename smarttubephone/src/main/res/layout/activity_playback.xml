@@ -18,9 +18,11 @@
             android:layout_height="match_parent"
             app:controller_layout_id="@layout/exo_player_control_view"
             app:hide_on_touch="true"
+            app:keep_content_on_player_reset="true"
             app:resize_mode="fit"
             app:show_buffering="when_playing"
             app:show_timeout="4000"
+            app:surface_type="texture_view"
             app:use_controller="true" />
 
         <ProgressBar
@@ -41,6 +43,17 @@
             android:textColor="@color/phone_on_surface"
             android:textSize="18sp"
             android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/btn_player_fullscreen"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/fullscreen"
+            android:elevation="4dp"
+            android:src="@drawable/ic_fullscreen" />
     </FrameLayout>
 
     <androidx.core.widget.NestedScrollView

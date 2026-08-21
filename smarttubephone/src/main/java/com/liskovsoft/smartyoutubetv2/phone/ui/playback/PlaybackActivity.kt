@@ -14,6 +14,7 @@ import android.util.Log
 import android.util.SparseIntArray
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -71,6 +72,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     private lateinit var playerActions: View
     private lateinit var btnFullscreen: MaterialButton
     private lateinit var btnResize: MaterialButton
+    private var overlayFullscreenBtn: ImageButton? = null
     private var playerContainer: View? = null
     private var detailSection: View? = null
     private var seekHint: TextView? = null
@@ -157,6 +159,8 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         playerActions = findViewById(R.id.player_actions)
         btnFullscreen = findViewById(R.id.btn_fullscreen)
         btnResize = findViewById(R.id.btn_resize)
+        overlayFullscreenBtn = findViewById(R.id.btn_player_fullscreen)
+        overlayFullscreenBtn?.setOnClickListener { toggleFullscreen() }
         playerContainer = findViewById(R.id.player_container)
         detailSection = findViewById(R.id.detail_section)
         seekHint = findViewById(R.id.seek_hint)
@@ -255,6 +259,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
                 val visible = visibility == View.VISIBLE
                 controlsShown = visible
                 overlayShown = visible
+                overlayFullscreenBtn?.visibility = if (visible) View.VISIBLE else View.GONE
                 val overlayParent = playerContainer
                 if (titleView.parent == overlayParent) {
                     titleView.visibility = if (visible) View.VISIBLE else View.GONE
@@ -865,10 +870,16 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     private fun setFullscreen(enabled: Boolean) {
         userFullscreen = enabled
-        requestedOrientation = if (enabled) {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        if (enabled) {
+            // LANDSCAPE (not SENSOR_*) forces rotate even when the system is portrait-locked.
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            playerContainer?.post {
+                if (!userFullscreen) {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
         }
         applyPlayerLayout()
     }
@@ -903,9 +914,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         applyResizeMode()
         setImmersiveMode(fullscreen)
         updateActionButtons()
-
-        playerView.requestLayout()
-        playerView.post { playerView.requestLayout() }
+        playerContainer?.requestLayout()
     }
 
     private fun applyResizeMode() {
@@ -927,6 +936,12 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
                 if (userFullscreen) R.string.exit_fullscreen else R.string.fullscreen
             )
         }
+        overlayFullscreenBtn?.setImageResource(
+            if (userFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen
+        )
+        overlayFullscreenBtn?.contentDescription = getString(
+            if (userFullscreen) R.string.exit_fullscreen else R.string.fullscreen
+        )
         if (::btnResize.isInitialized) {
             // Button shows the action you can switch TO.
             btnResize.setText(if (fillMode) R.string.video_fit else R.string.video_fill)

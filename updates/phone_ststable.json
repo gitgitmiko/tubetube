@@ -2,6 +2,13 @@
   "package": {
     "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
   },
+  "v.013": {
+    "versionCode": 13,
+    "changelog": [
+      "Fix video freeze when rotating portrait to landscape",
+      "Fullscreen button forces landscape even if rotation is locked"
+    ]
+  },
   "v.012": {
     "versionCode": 12,
     "changelog": [

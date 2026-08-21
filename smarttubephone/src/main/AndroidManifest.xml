@@ -68,7 +68,7 @@
 
         <activity
             android:name=".ui.playback.PlaybackActivity"
-            android:configChanges="keyboard|keyboardHidden"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="false"
             android:launchMode="singleTop"
             android:supportsPictureInPicture="true"
