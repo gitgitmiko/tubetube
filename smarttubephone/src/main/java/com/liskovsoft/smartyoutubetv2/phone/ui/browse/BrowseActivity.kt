@@ -4,14 +4,12 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.bumptech.glide.Glide
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection
@@ -33,13 +31,12 @@ import com.liskovsoft.smartyoutubetv2.phone.adapter.PhoneChip
 import com.liskovsoft.smartyoutubetv2.phone.adapter.SectionAdapter
 import com.liskovsoft.smartyoutubetv2.phone.adapter.ShortsGridAdapter
 import com.liskovsoft.smartyoutubetv2.phone.navigation.PhoneTab
-import com.liskovsoft.smartyoutubetv2.phone.player.PhonePlaybackBridge
 import com.liskovsoft.smartyoutubetv2.phone.shorts.ShortsFeedActivity
 import com.liskovsoft.smartyoutubetv2.phone.shorts.ShortsFeedSession
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics
 
-class BrowseActivity : PhoneBaseActivity(), BrowseView, PhonePlaybackBridge.Listener {
+class BrowseActivity : PhoneBaseActivity(), BrowseView {
     private lateinit var presenter: BrowsePresenter
     private lateinit var titleView: TextView
     private lateinit var progressBar: ProgressBar
@@ -48,7 +45,6 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView, PhonePlaybackBridge.List
     private lateinit var chipList: RecyclerView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var bottomNav: BottomNavigationView
-    private lateinit var miniPlayer: View
 
     private lateinit var sectionAdapter: SectionAdapter
     private lateinit var chipAdapter: ChipAdapter
@@ -76,7 +72,6 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView, PhonePlaybackBridge.List
         chipList = findViewById(R.id.chip_list)
         swipeRefresh = findViewById(R.id.swipe_refresh)
         bottomNav = findViewById(R.id.bottom_nav)
-        miniPlayer = findViewById(R.id.mini_player)
 
         findViewById<ImageButton>(R.id.btn_search).setOnClickListener {
             SearchPresenter.instance(this).startSearch(null)
@@ -157,8 +152,6 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView, PhonePlaybackBridge.List
                 else -> false
             }
         }
-
-        setupMiniPlayer()
 
         presenter = BrowsePresenter.instance(this)
         presenter.setView(this)
@@ -397,47 +390,14 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView, PhonePlaybackBridge.List
         presenter.onScrollEnd(video)
     }
 
-    private fun setupMiniPlayer() {
-        miniPlayer.setOnClickListener {
-            PhonePlaybackBridge.host?.expandFromMiniPlayer()
-        }
-        miniPlayer.findViewById<ImageButton>(R.id.mini_player_play).setOnClickListener {
-            PhonePlaybackBridge.host?.togglePlayPause()
-            bindMiniPlayer()
-        }
-        miniPlayer.findViewById<ImageButton>(R.id.mini_player_close).setOnClickListener {
-            PhonePlaybackBridge.host?.closeFromMiniPlayer()
-        }
-    }
-
-    private fun bindMiniPlayer() {
-        val visible = PhonePlaybackBridge.isVisible()
-        miniPlayer.visibility = if (visible) View.VISIBLE else View.GONE
-        if (!visible) return
-        val video = PhonePlaybackBridge.host?.currentVideo()
-        miniPlayer.findViewById<TextView>(R.id.mini_player_title).text = video?.title ?: ""
-        val thumb = miniPlayer.findViewById<ImageView>(R.id.mini_player_thumb)
-        Glide.with(thumb).load(video?.cardImageUrl).centerCrop().into(thumb)
-        val playing = PhonePlaybackBridge.host?.isPlaying() == true
-        miniPlayer.findViewById<ImageButton>(R.id.mini_player_play)
-            .setImageResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play)
-    }
-
-    override fun onMiniPlayerChanged() {
-        bindMiniPlayer()
-    }
-
     override fun onResume() {
         super.onResume()
         presenter.onViewResumed()
-        PhonePlaybackBridge.addListener(this)
-        bindMiniPlayer()
     }
 
     override fun onPause() {
         super.onPause()
         presenter.onViewPaused()
-        PhonePlaybackBridge.removeListener(this)
     }
 
     override fun onDestroy() {

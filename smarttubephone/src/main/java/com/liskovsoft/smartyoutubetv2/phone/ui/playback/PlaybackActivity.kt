@@ -211,6 +211,24 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
         presenter.onViewInitialized()
         PhonePlaybackBridge.attach(playbackBridgeHost)
+        onBackPressedDispatcher.addCallback(this, backToMiniPlayerCallback)
+    }
+
+    override fun showsMiniPlayer(): Boolean = false
+
+    private val backToMiniPlayerCallback = object : androidx.activity.OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (userFullscreen) {
+                setFullscreen(false)
+                return
+            }
+            if (player != null && currentVideo != null) {
+                minimizeToMiniPlayer()
+                return
+            }
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+        }
     }
 
     private fun ensureDefault1080p() {
@@ -354,8 +372,16 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun onResume() {
         super.onResume()
+        if (engineBlocked && PhonePlaybackBridge.minimized) {
+            // Keep playing in the background while the mini player is shown.
+            if (::presenter.isInitialized) {
+                presenter.onViewResumed()
+            }
+            return
+        }
         blockEngine(false)
         PhonePlaybackBridge.setMinimized(false)
+        backToMiniPlayerCallback.isEnabled = true
         if ((Util.SDK_INT <= 23 || player == null) && ::presenter.isInitialized) {
             initializePlayer()
         }
@@ -806,12 +832,8 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
     }
 
     override fun onBackPressed() {
-        if (userFullscreen) {
-            setFullscreen(false)
-            return
-        }
-        if (player != null && currentVideo != null) {
-            minimizeToMiniPlayer()
+        if (backToMiniPlayerCallback.isEnabled) {
+            backToMiniPlayerCallback.handleOnBackPressed()
             return
         }
         super.onBackPressed()
