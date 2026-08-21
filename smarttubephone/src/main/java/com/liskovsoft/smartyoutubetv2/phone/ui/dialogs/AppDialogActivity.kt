@@ -21,6 +21,7 @@ import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 import java.util.ArrayDeque
 
 class AppDialogActivity : PhoneBaseActivity(), AppDialogView {
+    override fun showsMiniPlayer(): Boolean = false
     private lateinit var presenter: AppDialogPresenter
     private lateinit var titleView: TextView
     private lateinit var list: RecyclerView

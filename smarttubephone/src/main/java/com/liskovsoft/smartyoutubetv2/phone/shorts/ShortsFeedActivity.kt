@@ -39,6 +39,7 @@ import android.content.res.Configuration
  * Swipe up = next, swipe down = previous (natural vertical pager).
  */
 class ShortsFeedActivity : PhoneBaseActivity() {
+    override fun showsMiniPlayer(): Boolean = false
     private lateinit var pager: RecyclerView
     private lateinit var footerProgress: ProgressBar
     private lateinit var adapter: ShortsPagerAdapter

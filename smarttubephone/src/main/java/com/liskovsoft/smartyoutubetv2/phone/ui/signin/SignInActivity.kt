@@ -15,6 +15,7 @@ import com.liskovsoft.smartyoutubetv2.phone.R
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 
 class SignInActivity : PhoneBaseActivity(), SignInView {
+    override fun showsMiniPlayer(): Boolean = false
     private lateinit var presenter: SignInPresenter
     private lateinit var codeView: TextView
     private lateinit var descriptionView: TextView

@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <supports-screens
@@ -62,13 +64,13 @@
             android:name=".ui.browse.BrowseActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="false"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTop" />
 
         <activity
             android:name=".ui.playback.PlaybackActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="false"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.SmartTubePhone.Player" />
 
@@ -104,5 +106,10 @@
             android:name=".ui.dialogs.AppDialogActivity"
             android:exported="false"
             android:theme="@style/Theme.SmartTubePhone.Dialog" />
+
+        <service
+            android:name=".player.PhonePlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 </manifest>

@@ -27,7 +27,7 @@ class PhoneMiniPlayerBinder(
         bar.setOnClickListener { PhonePlaybackBridge.host?.expandFromMiniPlayer() }
         bar.findViewById<ImageButton>(R.id.mini_player_play).setOnClickListener {
             PhonePlaybackBridge.host?.togglePlayPause()
-            bind()
+            PhonePlaybackBridge.notifyChanged()
         }
         bar.findViewById<ImageButton>(R.id.mini_player_close).setOnClickListener {
             PhonePlaybackBridge.host?.closeFromMiniPlayer()

@@ -31,6 +31,7 @@ import com.liskovsoft.smartyoutubetv2.phone.adapter.PhoneChip
 import com.liskovsoft.smartyoutubetv2.phone.adapter.SectionAdapter
 import com.liskovsoft.smartyoutubetv2.phone.adapter.ShortsGridAdapter
 import com.liskovsoft.smartyoutubetv2.phone.navigation.PhoneTab
+import com.liskovsoft.smartyoutubetv2.phone.player.PhonePlaybackBridge
 import com.liskovsoft.smartyoutubetv2.phone.shorts.ShortsFeedActivity
 import com.liskovsoft.smartyoutubetv2.phone.shorts.ShortsFeedSession
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
@@ -72,6 +73,17 @@ class BrowseActivity : PhoneBaseActivity(), BrowseView {
         chipList = findViewById(R.id.chip_list)
         swipeRefresh = findViewById(R.id.swipe_refresh)
         bottomNav = findViewById(R.id.bottom_nav)
+
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (PhonePlaybackBridge.isVisible()) {
+                    moveTaskToBack(true)
+                    return
+                }
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        })
 
         findViewById<ImageButton>(R.id.btn_search).setOnClickListener {
             SearchPresenter.instance(this).startSearch(null)

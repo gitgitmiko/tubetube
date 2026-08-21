@@ -7,6 +7,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.views.SplashView
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 
 class SplashActivity : PhoneBaseActivity(), SplashView {
+    override fun showsMiniPlayer(): Boolean = false
     private var newIntent: Intent? = null
     private lateinit var presenter: SplashPresenter
 

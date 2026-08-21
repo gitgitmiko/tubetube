@@ -1,5 +1,6 @@
 package com.liskovsoft.smartyoutubetv2.phone.ui.playback
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
@@ -34,9 +35,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.ChatReceiver
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.SeekBarSegment
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.PlaybackPresenter
-import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView
 import com.liskovsoft.smartyoutubetv2.common.app.views.PlaybackView
-import com.liskovsoft.smartyoutubetv2.common.app.views.ViewManager
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.ExoPlayerController
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.PlayerView as ExoQualityView
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.other.ExoPlayerInitializer
@@ -53,6 +52,7 @@ import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager
 import com.liskovsoft.smartyoutubetv2.common.utils.Utils
 import com.liskovsoft.smartyoutubetv2.phone.downloads.PhoneDownloadStore
 import com.liskovsoft.smartyoutubetv2.phone.player.PhonePlaybackBridge
+import com.liskovsoft.smartyoutubetv2.phone.player.PhonePlaybackService
 import com.liskovsoft.smartyoutubetv2.phone.ui.comments.CommentsSheet
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneBaseActivity
 import com.liskovsoft.smartyoutubetv2.phone.ui.PhoneUiMetrics
@@ -100,6 +100,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         override fun togglePlayPause() {
             if (!::exoController.isInitialized) return
             exoController.setPlayWhenReady(!exoController.playWhenReady)
+            PhonePlaybackBridge.notifyChanged()
         }
 
         override fun isPlaying(): Boolean =
@@ -108,7 +109,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         override fun expandFromMiniPlayer() {
             PhonePlaybackBridge.setMinimized(false)
             blockEngine(false)
-            ViewManager.instance(this@PlaybackActivity).startView(PlaybackView::class.java)
+            PhonePlaybackBridge.openFullPlayer(this@PlaybackActivity)
         }
 
         override fun closeFromMiniPlayer() {
@@ -130,6 +131,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
             if (playWhenReady && playbackState == Player.STATE_READY) {
                 showProgressBar(false)
             }
+            PhonePlaybackBridge.notifyChanged()
         }
     }
 
@@ -210,8 +212,13 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
         }
 
         presenter.onViewInitialized()
-        PhonePlaybackBridge.attach(playbackBridgeHost)
+        PhonePlaybackBridge.attach(playbackBridgeHost, this)
         onBackPressedDispatcher.addCallback(this, backToMiniPlayerCallback)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     override fun showsMiniPlayer(): Boolean = false
@@ -372,6 +379,11 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun onResume() {
         super.onResume()
+        if (intent?.action == PhonePlaybackService.ACTION_OPEN) {
+            PhonePlaybackBridge.setMinimized(false)
+            blockEngine(false)
+            intent.action = null
+        }
         if (engineBlocked && PhonePlaybackBridge.minimized) {
             // Keep playing in the background while the mini player is shown.
             if (::presenter.isInitialized) {
@@ -397,6 +409,7 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     override fun onPause() {
         super.onPause()
+        if (engineBlocked) return
         if (::presenter.isInitialized) {
             presenter.onViewPaused()
         }
@@ -841,9 +854,9 @@ class PlaybackActivity : PhoneBaseActivity(), PlaybackView, ExoQualityView {
 
     private fun minimizeToMiniPlayer() {
         blockEngine(true)
-        PhonePlaybackBridge.attach(playbackBridgeHost)
+        PhonePlaybackBridge.attach(playbackBridgeHost, this)
         PhonePlaybackBridge.setMinimized(true)
-        ViewManager.instance(this).startView(BrowseView::class.java)
+        PhonePlaybackBridge.openBrowseKeepingPlayer(this)
     }
 
     private fun toggleFullscreen() {

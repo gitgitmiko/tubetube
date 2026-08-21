@@ -2,6 +2,13 @@
   "package": {
     "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
   },
+  "v.010": {
+    "versionCode": 10,
+    "changelog": [
+      "Keep the mini player visible after Back",
+      "Show playback controls in the status bar notification"
+    ]
+  },
   "v.009": {
     "versionCode": 9,
     "changelog": [

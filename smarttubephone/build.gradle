@@ -16,8 +16,8 @@ android {
         minSdkVersion 21
         targetSdkVersion project.properties.compileSdkVersion
         // Bump both when shipping a new phone build (APK name uses versionName).
-        versionCode 9
-        versionName "v.009"
+        versionCode 10
+        versionName "v.010"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

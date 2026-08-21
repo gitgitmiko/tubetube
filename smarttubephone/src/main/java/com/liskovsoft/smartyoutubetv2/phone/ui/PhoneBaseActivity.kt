@@ -22,16 +22,12 @@ open class PhoneBaseActivity : MotherActivity() {
         if (showsMiniPlayer() && miniPlayerBinder == null) {
             miniPlayerBinder = PhoneMiniPlayerBinder(this)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
         miniPlayerBinder?.onResume()
     }
 
-    override fun onPause() {
+    override fun onStop() {
         miniPlayerBinder?.onPause()
-        super.onPause()
+        super.onStop()
     }
 
     override fun initTheme() {
