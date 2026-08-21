@@ -64,7 +64,7 @@ public class AppUpdatePresenter extends BasePresenter<Void> implements AppUpdate
         if (mIsForceCheck) {
             LoadingManager.showLoading(getContext(), false);
             showUpdateDialog(versionName, changelog, apkPath);
-        } else if (GeneralData.instance(getContext()).isOldUpdateNotificationsEnabled()) {
+        } else if (isPhoneUi() || GeneralData.instance(getContext()).isOldUpdateNotificationsEnabled()) {
             showUpdateDialog(versionName, changelog, apkPath);
         } else {
             pinUpdateSection(versionName, changelog, apkPath);
@@ -163,5 +163,10 @@ public class AppUpdatePresenter extends BasePresenter<Void> implements AppUpdate
         }
 
         return builder.toString();
+    }
+
+    private boolean isPhoneUi() {
+        Context ctx = getContext();
+        return ctx != null && ctx.getPackageName() != null && ctx.getPackageName().contains(".phone");
     }
 }

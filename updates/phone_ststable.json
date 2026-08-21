@@ -2,6 +2,12 @@
   "package": {
     "downloadUrl": "https://github.com/gitgitmiko/tubetube/releases/latest/download/smarttubephone-ststable.apk"
   },
+  "v.009": {
+    "versionCode": 9,
+    "changelog": [
+      "Show an update dialog on phone so OTA actually appears"
+    ]
+  },
   "v.008": {
     "versionCode": 8,
     "changelog": [
